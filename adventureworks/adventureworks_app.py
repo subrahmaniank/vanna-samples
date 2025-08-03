@@ -1,8 +1,8 @@
-from portfolio_analyzer import EnvironmentLoader, MyVanna
+from adventureworks.common import EnvironmentLoader, MyVanna
 from vanna.flask import VannaFlaskApp
 
 
-class PortfolioAnalyzerApp:
+class AdventureWorksApp:
     def __init__(self):
         self.env_vars = EnvironmentLoader.load_environment_variables()
         self._initialize_vanna()
@@ -32,5 +32,5 @@ class PortfolioAnalyzerApp:
 
 
 if __name__ == "__main__":
-    app = PortfolioAnalyzerApp()
+    app = AdventureWorksApp()
     app.run()

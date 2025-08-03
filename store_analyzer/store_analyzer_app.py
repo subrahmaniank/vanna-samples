@@ -27,7 +27,7 @@ class StoreAnalyzerApp:
         )
 
     def run(self):
-        self.app.run(host='0.0.0.0', port=8086, debug=True)
+        self.app.run(host='0.0.0.0', port=8084, debug=True)
 
 
 if __name__ == "__main__":
