@@ -181,11 +181,13 @@ class DDLTrainer(BaseTrainer):
         FROM customer; ')
 
         vn.train(ddl='CREATE VIEW film_list AS \
-        SELECT fid, title, description, category, price, length, rating, actors \
+        SELECT fid, title, description, category, price, length, \
+              rating, actors \
         FROM film;')
 
         vn.train(ddl='CREATE VIEW nicer_but_slower_film_list AS \
-        SELECT fid, title, description, category, price, length, rating, actors \
+        SELECT fid, title, description, category, price, length, \
+                 rating, actors \
         FROM film; ')
 
         vn.train(ddl='CREATE VIEW sales_by_film_category AS \

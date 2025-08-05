@@ -1,7 +1,14 @@
-from store_analyzer import EnvironmentLoader, MyVanna
 from vanna.flask import VannaFlaskApp
+from store_analyzer import EnvironmentLoader, MyVanna, SimpleAuthorization
+
 
 class StoreAnalyzerApp:
+
+    user_list = [
+        {"user": "admin", "password": "admin#123"},
+        {"user": "hillyer", "password": "hillyer"}
+    ]
+
     def __init__(self):
         self.env_vars = EnvironmentLoader.load_environment_variables()
         self._initialize_vanna()
@@ -23,7 +30,11 @@ class StoreAnalyzerApp:
             allow_llm_to_see_data=True,
             logo="https://logodix.com/logo/1132951.jpg",
             title='Welcome to DVD Rental Store',
-            subtitle='Your AI-powered agent for answering questions on DVD rentals.',
+            subtitle='Your AI-powered agent for answering \
+                questions on DVD rentals.',
+            auth=SimpleAuthorization(env_vars=self.env_vars,
+                                     users=self.user_list,
+                                     vn=self.vn),
         )
 
     def run(self):
