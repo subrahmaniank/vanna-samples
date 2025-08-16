@@ -23,7 +23,6 @@ class PortfolioAnalyzerAPI:
         )
 
     def _initialize_app(self):
-        self.app = FastAPI()
 
         # Configure logging
         logging.basicConfig(

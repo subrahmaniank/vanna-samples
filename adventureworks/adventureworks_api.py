@@ -35,12 +35,12 @@ class PortfolioAnalyzerAPI:
 
         @asynccontextmanager
         async def startup_event(app: FastAPI):
-            self.logger.info("Starting up the Portfolio Analyzer API")
+            self.logger.info("Starting up the AdventureWorks API")
             try:
                 connect_db()
                 yield
             finally:
-                self.logger.info("Shutting down the Portfolio Analyzer API")
+                self.logger.info("Shutting down the AdventureWorks API")
 
         def connect_db():
             self.logger.info("Connecting to PostgreSQL database")

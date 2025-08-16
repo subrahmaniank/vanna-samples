@@ -19,7 +19,7 @@ class EnvironmentLoader:
 
         os.environ['REQUESTS_CA_BUNDLE'] = certifi.where()
 
-        # ssl.context = RelaxedSSLContext.create_relaxed_ssl_context()
+        ssl.context = RelaxedSSLContext.create_relaxed_ssl_context()
 
         return {
             "qdrant_url": os.getenv("QDRANT_URL"),

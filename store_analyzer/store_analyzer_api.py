@@ -23,8 +23,6 @@ class StoreAnalyzerAPI:
         )
 
     def _initialize_app(self):
-        self.app = FastAPI()
-
         # Configure logging
         logging.basicConfig(
             level=logging.INFO,
@@ -36,12 +34,12 @@ class StoreAnalyzerAPI:
 
         @asynccontextmanager
         async def startup_event(app: FastAPI):
-            self.logger.info("Starting up the Portfolio Analyzer API")
+            self.logger.info("Starting up the Store Analyzer API")
             try:
                 connect_db()
                 yield
             finally:
-                self.logger.info("Shutting down the Portfolio Analyzer API")
+                self.logger.info("Shutting down the Store Analyzer API")
 
         def connect_db():
             self.logger.info("Connecting to PostgreSQL database")
