@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from contextlib import asynccontextmanager
 from pydantic import BaseModel
 from typing import List, Any
 import logging
@@ -22,7 +23,6 @@ class PortfolioAnalyzerAPI:
         )
 
     def _initialize_app(self):
-        self.app = FastAPI()
 
         # Configure logging
         logging.basicConfig(
@@ -33,7 +33,15 @@ class PortfolioAnalyzerAPI:
         )
         self.logger = logging.getLogger(__name__)
 
-        @self.app.on_event("startup")
+        @asynccontextmanager
+        async def startup_event(app: FastAPI):
+            self.logger.info("Starting up the Portfolio Analyzer API")
+            try:
+                connect_db()
+                yield
+            finally:
+                self.logger.info("Shutting down the Portfolio Analyzer API")
+
         def connect_db():
             self.logger.info("Connecting to PostgreSQL database")
             self.vn.connect_to_postgres(
@@ -44,6 +52,8 @@ class PortfolioAnalyzerAPI:
                 password=self.env_vars["db_password"]
             )
             self.logger.info("Successfully connected to PostgreSQL database")
+
+        self.app = FastAPI(lifespan=startup_event)
 
         @self.app.post("/v1/query", response_model=QueryResponse)
         def query_vanna(request: QueryRequest):

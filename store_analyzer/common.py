@@ -2,6 +2,7 @@ import sys
 import ssl
 import warnings
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 import certifi
 from qdrant_client import QdrantClient
@@ -13,7 +14,9 @@ from openai import AzureOpenAI
 class EnvironmentLoader:
     @staticmethod
     def load_environment_variables():
-        load_dotenv()
+        env_path = Path(__file__).parent / ".env"
+        load_dotenv(dotenv_path=env_path)
+
         os.environ['REQUESTS_CA_BUNDLE'] = certifi.where()
 
         ssl.context = RelaxedSSLContext.create_relaxed_ssl_context()
