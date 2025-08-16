@@ -1,3 +1,4 @@
+import sys
 import ssl
 import warnings
 import os
@@ -69,25 +70,30 @@ class RelaxedSSLContext:
         capath=None,
         cadata=None
     ) -> ssl.SSLContext:
-        """
-        Create an SSL context with relaxed verification flags.
-        This reverts Python 3.13's stricter SSL checks.
-        Use only if you cannot fix your CA!
-        """
-        warnings.warn(
-            "Disabling VERIFY_X509_STRICT and VERIFY_X509_PARTIAL_CHAIN in create_default_context().\n"
-            "This reverts Python 3.13's stricter SSL checks. Use only if you cannot fix your CA!"
-        )
 
         # Create the default SSL context
         ctx = ssl.create_default_context(
             purpose=purpose, cafile=cafile, capath=capath, cadata=cadata
         )
 
-        # Remove the Python 3.13 flags if they exist
-        if hasattr(ssl, "VERIFY_X509_STRICT"):
-            ctx.verify_flags &= ~ssl.VERIFY_X509_STRICT
-        if hasattr(ssl, "VERIFY_X509_PARTIAL_CHAIN"):
-            ctx.verify_flags &= ~ssl.VERIFY_X509_PARTIAL_CHAIN
+        if sys.version_info >= (3, 13):
+
+            """
+            Create an SSL context with relaxed verification flags.
+            This reverts Python 3.13's stricter SSL checks.
+            Use only if you cannot fix your CA!
+            """
+            warnings.warn(
+                "Disabling VERIFY_X509_STRICT and VERIFY_X509_PARTIAL_CHAIN"
+                " in create_default_context().\n"
+                "This reverts Python 3.13's stricter SSL checks. "
+                "Use only if you cannot fix your CA!"
+            )
+
+            # Remove the Python 3.13 flags if they exist
+            if hasattr(ssl, "VERIFY_X509_STRICT"):
+                ctx.verify_flags &= ~ssl.VERIFY_X509_STRICT
+            if hasattr(ssl, "VERIFY_X509_PARTIAL_CHAIN"):
+                ctx.verify_flags &= ~ssl.VERIFY_X509_PARTIAL_CHAIN
 
         return ctx
