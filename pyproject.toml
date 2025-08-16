@@ -7,6 +7,7 @@ requires-python = ">=3.11"
 dependencies = [
     "dotenv>=0.9.9",
     "fastapi>=0.116.1",
+    "fastmcp>=2.11.3",
     "uvicorn>=0.35.0",
     "vanna[ollama,openai,postgres,qdrant]>=0.7.9",
 ]
