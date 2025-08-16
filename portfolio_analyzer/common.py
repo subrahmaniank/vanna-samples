@@ -1,3 +1,6 @@
+import sys
+import ssl
+import warnings
 import os
 from dotenv import load_dotenv
 import certifi
@@ -12,6 +15,8 @@ class EnvironmentLoader:
     def load_environment_variables():
         load_dotenv()
         os.environ['REQUESTS_CA_BUNDLE'] = certifi.where()
+
+        ssl.context = RelaxedSSLContext.create_relaxed_ssl_context()
 
         return {
             "qdrant_url": os.getenv("QDRANT_URL"),
@@ -54,3 +59,41 @@ class MyVanna(Qdrant_VectorStore, OpenAI_Chat):
                 "azure_openai_endpoint": env_vars["azure_openai_endpoint"],
             }
         )
+
+
+class RelaxedSSLContext:
+    @staticmethod
+    def create_relaxed_ssl_context(
+        purpose=ssl.Purpose.SERVER_AUTH,
+        *,
+        cafile=None,
+        capath=None,
+        cadata=None
+    ) -> ssl.SSLContext:
+
+        # Create the default SSL context
+        ctx = ssl.create_default_context(
+            purpose=purpose, cafile=cafile, capath=capath, cadata=cadata
+        )
+
+        if sys.version_info >= (3, 13):
+
+            """
+            Create an SSL context with relaxed verification flags.
+            This reverts Python 3.13's stricter SSL checks.
+            Use only if you cannot fix your CA!
+            """
+            warnings.warn(
+                "Disabling VERIFY_X509_STRICT and VERIFY_X509_PARTIAL_CHAIN"
+                " in create_default_context().\n"
+                "This reverts Python 3.13's stricter SSL checks. "
+                "Use only if you cannot fix your CA!"
+            )
+
+            # Remove the Python 3.13 flags if they exist
+            if hasattr(ssl, "VERIFY_X509_STRICT"):
+                ctx.verify_flags &= ~ssl.VERIFY_X509_STRICT
+            if hasattr(ssl, "VERIFY_X509_PARTIAL_CHAIN"):
+                ctx.verify_flags &= ~ssl.VERIFY_X509_PARTIAL_CHAIN
+
+        return ctx
