@@ -94,10 +94,12 @@ class StoreAnalyzerAPI:
 
                 self.logger.info(f"Query processed successfully: {result}")
 
-                return QueryResponse(sql=result.sql,
-                                     columns=result.columns,
-                                     rows=result.rows,
-                                     question=result.question)
+                return QueryResponse(
+                    sql=result["sql"],
+                    columns=result["columns"],
+                    rows=result["rows"],
+                    question=result["question"]
+                )
 
             except Exception as e:
                 self.logger.error(f"Error processing query: {str(e)}")
