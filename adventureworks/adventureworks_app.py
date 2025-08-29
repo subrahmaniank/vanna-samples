@@ -1,4 +1,4 @@
-from adventureworks.common import EnvironmentLoader, MyVanna
+from adventureworks import EnvironmentLoader, MyVanna
 from vanna.flask import VannaFlaskApp
 
 

@@ -1,4 +1,4 @@
-from portfolio_analyzer.common import EnvironmentLoader, MyVanna
+from adventureworks import EnvironmentLoader, MyVanna
 
 
 class BaseTrainer:

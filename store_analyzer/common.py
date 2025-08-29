@@ -32,6 +32,7 @@ class EnvironmentLoader:
             "azure_openai_endpoint": os.getenv("AZURE_OPENAI_ENDPOINT"),
             "azure_openai_key": os.getenv("AZURE_OPENAI_API_KEY"),
             "azure_openai_model": os.getenv("AZURE_OPENAI_MODEL"),
+            "azure_openai_api_version": os.getenv("AZURE_OPENAI_API_VERSION")
         }
 
 
@@ -42,7 +43,7 @@ class MyVanna(Qdrant_VectorStore, OpenAI_Chat):
             self,
             client=AzureOpenAI(
                 api_key=config["azure_openai_key"],
-                api_version="2024-02-15-preview",
+                api_version=config["azure_openai_api_version"],
                 azure_endpoint=config["azure_openai_endpoint"],
             ),
             config=config,
@@ -60,6 +61,7 @@ class MyVanna(Qdrant_VectorStore, OpenAI_Chat):
                 "ddl_collection_name": "dr_ddl",
                 "azure_openai_key": env_vars["azure_openai_key"],
                 "azure_openai_endpoint": env_vars["azure_openai_endpoint"],
+                "azure_openai_api_version": env_vars["azure_openai_api_version"]
             }
         )
 

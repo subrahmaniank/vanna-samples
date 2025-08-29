@@ -6,7 +6,7 @@ from .sql_trainer import SQLTrainer
 from .ddl_trainer import DDLTrainer
 from .adventureworks_api import AdventureworksAPI
 from .adventureworks_app import AdventureWorksApp
-
+from .adventureworks_mcp import AdventureWorksMCP
 __all__ = ['EnvironmentLoader', 'MyVanna', 'BaseTrainer',
            'DocTrainer', 'SQLTrainer', 'DDLTrainer',
-           'AdventureworksAPI', 'AdventureWorksApp']
+           'AdventureworksAPI', 'AdventureWorksApp', 'AdventureWorksMCP']
