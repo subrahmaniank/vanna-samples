@@ -33,7 +33,7 @@ class PortfolioAnalyzerMCP:
                 "question": response["question"]
             }
 
-    def run(self, host="0.0.0.0", port=8087, debug=True, transport="http"):
+    def run(self, host="0.0.0.0", port=8088, debug=True, transport="http"):
         self.mcp.run(transport=transport, host=host, port=port)
 
 
@@ -41,5 +41,5 @@ if __name__ == "__main__":
     mcp_instance = PortfolioAnalyzerMCP()
     mcp_instance.run(transport="sse",
                      host="0.0.0.0",
-                     port=8087,
+                     port=8088,
                      debug=True)
