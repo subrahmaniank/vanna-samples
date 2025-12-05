@@ -11,7 +11,7 @@ The repository contains three main modules, each demonstrating different use cas
 - **Key Components**:
   - `adventureworks_api.py`: FastAPI endpoints for querying the database
   - `adventureworks_app.py`: Web interface for the AdventureWorks demo
-  - `adventureworks_mcp.py`: Model-Controller-Presenter implementation
+  - `adventureworks_mcp.py`: Model Context Protocol implementation
   - Trainers: Contains specialized trainers for DDL, SQL, and documentation
 
 ### 2. Portfolio Analyzer Module
@@ -95,7 +95,7 @@ uvicorn store_analyzer.store_analyzer_api:app --host 0.0.0.0 --port 8081 --reloa
 
 ### Running the MCP Server
 
-To run the Model-Controller-Presenter server for any module:
+To run the Model Context Protocol server for any module:
 
 ```bash
 # For AdventureWorks (Port 8089)
