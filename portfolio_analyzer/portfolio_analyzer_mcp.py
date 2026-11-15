@@ -1,45 +1,55 @@
 from fastmcp import FastMCP
-from portfolio_analyzer.portfolio_analyzer_api import PortfolioAnalyzerAPI
+from portfolio_analyzer.agent_factory import create_agent
+
+try:
+    from vanna.core.user import RequestContext
+except ImportError:
+    RequestContext = None
 
 
 class PortfolioAnalyzerMCP:
+    """
+    Model Context Protocol (MCP) server for Portfolio Analyzer,
+    powered by Vanna 2.0 Agent.
+    """
+
     def __init__(self):
-        self.api_instance = PortfolioAnalyzerAPI()
-        # Expose the app instance for uvicorn
-        fastapi_app = self.api_instance.app
-        self.mcp = FastMCP.from_fastapi(app=fastapi_app)
+        self.agent = create_agent()
+        self.mcp = FastMCP(name="Portfolio Analyzer")
         self._register_tools()
 
     def _register_tools(self):
         @self.mcp.tool
-        def query_portfolio_analyzer(question: str) -> dict:
+        async def query_portfolio_analyzer(question: str) -> dict:
             """
             Query the portfolio analyzer with a question
             related to investments, assets, funds, scrips,
-            porfolios, accounts, and other financial queries.
+            portfolios, accounts, and other financial queries.
 
             Args:
-                question (str): The question to ask the porfolio analyzer.
+                question (str): The question to ask the portfolio analyzer.
 
             Returns:
-                dict: The response from the API containing
-                SQL, columns, rows and original question.
+                dict: The response containing the question and answer from the agent.
             """
-            response = self.api_instance.query_vanna(question)
+            context = RequestContext() if RequestContext else None
+            collected_text = []
+
+            async for component in self.agent.send_message(context, question):
+                if hasattr(component, "simple_component") and component.simple_component:
+                    collected_text.append(str(getattr(component.simple_component, "text", "")))
+                elif hasattr(component, "text"):
+                    collected_text.append(str(component.text))
+
             return {
-                "sql": response["sql"],
-                "columns": response["columns"],
-                "rows": response["rows"],
-                "question": response["question"]
+                "question": question,
+                "response": "\n".join(collected_text)
             }
 
-    def run(self, host="0.0.0.0", port=8088, debug=True, transport="http"):
+    def run(self, host: str = "0.0.0.0", port: int = 8088, transport: str = "sse", debug: bool = True):
         self.mcp.run(transport=transport, host=host, port=port)
 
 
 if __name__ == "__main__":
     mcp_instance = PortfolioAnalyzerMCP()
-    mcp_instance.run(transport="sse",
-                     host="0.0.0.0",
-                     port=8088,
-                     debug=True)
+    mcp_instance.run(transport="sse", host="0.0.0.0", port=8088)

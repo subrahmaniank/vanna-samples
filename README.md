@@ -1,117 +1,151 @@
-# Vanna Samples
+# Vanna 2.0 Samples
 
-A collection of sample applications demonstrating the use of Vanna AI for natural language to SQL generation and analysis.
+A collection of sample applications demonstrating the use of **Vanna 2.0** for natural language to SQL generation, agentic retrieval, and interactive database exploration powered by **Snowflake**, **Qdrant Cloud/Service**, and **Azure OpenAI**.
+
+## Architecture (Vanna 2.0)
+
+In version 2.0, Vanna has transitioned to a modular, user-aware Agent framework:
+- **`Agent`**: The orchestrator coordinating LLM reasoning, permissions, and tool executions.
+- **`SnowflakeRunner`**: Executes queries against Snowflake data warehouses (with PostgreSQL fallback support).
+- **`QdrantAgentMemory`**: Cloud/service-connected vector store managing Tool Memory (past SQL examples) and Text Memory (DDL and schema documentation).
+- **`UserResolver`**: Context-driven user authentication and Role-Based Access Control (RBAC).
+- **`VannaFastAPIServer`**: Serves the modern streaming UI (`<vanna-chat>`) and SSE endpoints.
+- **`FastMCP`**: Model Context Protocol servers exposing the agents to AI tools.
+
+---
 
 ## Project Structure
 
-The repository contains three main modules, each demonstrating different use cases of Vanna AI:
+The repository contains three modules:
 
-### 1. AdventureWorks Module
-- **Purpose**: Analyzes the AdventureWorks database
-- **Key Components**:
-  - `adventureworks_api.py`: FastAPI endpoints for querying the database
-  - `adventureworks_app.py`: Web interface for the AdventureWorks demo
-  - `adventureworks_mcp.py`: Model Context Protocol implementation
-  - Trainers: Contains specialized trainers for DDL, SQL, and documentation
+### 1. AdventureWorks Module (`adventureworks/`)
+- **Domain**: Order management, purchasing, sales, and inventory
+- **Server**: `adventureworks/adventureworks_server.py` (Port `8086`)
+- **MCP Server**: `adventureworks/adventureworks_mcp.py` (Port `8089`)
+- **Seeder**: `adventureworks/seed_memory.py`
 
-### 2. Portfolio Analyzer Module
-- **Purpose**: Analyzes investment portfolios
-- **Key Components**:
-  - `portfolio_analyzer_api.py`: API endpoints for portfolio analysis
-  - `portfolio_analyzer_app.py`: Web interface for portfolio analysis
-  - `portfolio_analyzer_mcp.py`: MCP implementation for portfolio analysis
-  - Trainers: Specialized trainers for different aspects of portfolio analysis
+### 2. Store Analyzer Module (`store_analyzer/`)
+- **Domain**: DVD rental operations, movies, customers, staff
+- **Auth**: RBAC with cookie-based user resolver (`admin` and `hillyer` roles)
+- **Server**: `store_analyzer/store_analyzer_server.py` (Port `8084`)
+- **MCP Server**: `store_analyzer/store_analyzer_mcp.py` (Port `8087`)
+- **Seeder**: `store_analyzer/seed_memory.py`
 
-### 3. Store Analyzer Module
-- **Purpose**: Analyzes retail store data
-- **Key Components**:
-  - `store_analyzer_api.py`: API endpoints for store analysis
-  - `store_analyzer_app.py`: Web interface for store analysis
-  - `store_analyzer_mcp.py`: MCP implementation for store analysis
-  - `simple_authorization.py`: Basic auth implementation
-  - Trainers: Specialized trainers for different aspects of store analysis
+### 3. Portfolio Analyzer Module (`portfolio_analyzer/`)
+- **Domain**: Investment portfolios, assets, transactions, and performance metrics
+- **Server**: `portfolio_analyzer/portfolio_analyzer_server.py` (Port `8085`)
+- **MCP Server**: `portfolio_analyzer/portfolio_analyzer_mcp.py` (Port `8088`)
+- **Seeder**: `portfolio_analyzer/seed_memory.py`
 
-## Prerequisites
+### Shared Components (`shared/`)
+- `shared/qdrant_agent_memory.py`: Qdrant Cloud vector memory implementation
+- `shared/snowflake_runner.py`: Snowflake SQL runner implementation
+- `shared/postgres_runner.py`: PostgreSQL SQL runner implementation
+- `shared/env_loader.py`: Unified `.env` loader supporting root and module levels
+- `shared/ssl_utils.py`: Enterprise CA bundle & relaxed SSL verification for Python 3.13
 
-- Python 3.8+
-- UV package manager (`pip install uv`)
-- PostgreSQL database (for AdventureWorks)
-- Required environment variables (see `sample.env` in each module)
+---
 
-## Installation
+## Configuration
 
-1. Clone the repository:
-   ```bash
-   git clone <repository-url>
-   cd vanna-samples
-   ```
-
-2. Install dependencies using UV:
-   ```bash
-   uv pip install -r requirements.txt
-   ```
-   
-   Or install for production:
-   ```bash
-   uv pip install --no-deps .
-   ```
-
-## Running the Applications
-
-## Service Ports
-
-### Web Applications
-Each module runs its web interface on a different port:
-- **AdventureWorks Web**: `http://localhost:8086`
-- **Portfolio Analyzer Web**: `http://localhost:8085`
-- **Store Analyzer Web**: `http://localhost:8084`
-
-### API Servers
-Each module runs its API server on a different port:
-- **AdventureWorks API**: `http://localhost:8083`
-- **Portfolio Analyzer API**: `http://localhost:8082`
-- **Store Analyzer API**: `http://localhost:8081`
-
-### MCP Servers
-Each MCP server runs on a different port:
-- **AdventureWorks MCP**: `http://localhost:8089`
-- **Portfolio Analyzer MCP**: `http://localhost:8088`
-- **Store Analyzer MCP**: `http://localhost:8087`
-
-### Running the API Server
-
-Each module can be run as a standalone FastAPI application:
+Copy `sample.env` to `.env` in the project root or inside each module:
 
 ```bash
-# For AdventureWorks (Port 8083)
-uvicorn adventureworks.adventureworks_api:app --host 0.0.0.0 --port 8083 --reload
-
-# For Portfolio Analyzer (Port 8082)
-uvicorn portfolio_analyzer.portfolio_analyzer_api:app --host 0.0.0.0 --port 8082 --reload
-
-# For Store Analyzer (Port 8081)
-uvicorn store_analyzer.store_analyzer_api:app --host 0.0.0.0 --port 8081 --reload
+cp sample.env .env
 ```
 
-### Running the MCP Server
+Configure the following variables in `.env`:
 
-To run the Model Context Protocol server for any module:
+```env
+# Snowflake Database Configuration
+SNOWFLAKE_ACCOUNT=your_account.region
+SNOWFLAKE_USER=your_user
+SNOWFLAKE_PASSWORD=your_password
+SNOWFLAKE_DATABASE=ADVENTUREWORKS  # or DVDRENTAL, SEI_DEMO
+SNOWFLAKE_SCHEMA=PUBLIC
+SNOWFLAKE_WAREHOUSE=COMPUTE_WH
+SNOWFLAKE_ROLE=
+
+# Qdrant Cloud / Managed Service
+QDRANT_URL=https://<cluster-id>.<region>.gcp.cloud.qdrant.io:6333
+QDRANT_API_KEY=your_qdrant_api_key
+
+# Azure OpenAI
+LLM_ENV=openai
+AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+AZURE_OPENAI_API_KEY=your_azure_key
+AZURE_OPENAI_MODEL=gpt-4o-mini
+AZURE_OPENAI_API_VERSION=2024-12-01-preview
+```
+
+---
+
+## Seeding Memory (DDL, Docs, and SQL)
+
+Populate your Qdrant vector store with schema DDL, documentation, and known-good queries:
 
 ```bash
-# For AdventureWorks (Port 8089)
+# Seed AdventureWorks
+python -m adventureworks.seed_memory
+
+# Seed Store Analyzer
+python -m store_analyzer.seed_memory
+
+# Seed Portfolio Analyzer
+python -m portfolio_analyzer.seed_memory
+```
+
+---
+
+## Running the Servers
+
+### 1. Web & API Servers (VannaFastAPIServer)
+
+Each server serves both the interactive `<vanna-chat>` web interface and the SSE streaming backend:
+
+```bash
+# AdventureWorks (Port 8086)
+python -m adventureworks.adventureworks_server
+
+# Store Analyzer (Port 8084)
+python -m store_analyzer.store_analyzer_server
+
+# Portfolio Analyzer (Port 8085)
+python -m portfolio_analyzer.portfolio_analyzer_server
+```
+
+Or using uvicorn directly:
+```bash
+uvicorn adventureworks.adventureworks_server:app --host 0.0.0.0 --port 8086 --reload
+```
+
+### 2. MCP Servers (Model Context Protocol)
+
+Run the SSE-based MCP servers:
+
+```bash
+# AdventureWorks MCP (Port 8089)
 python -m adventureworks.adventureworks_mcp
 
-# For Portfolio Analyzer (Port 8088)
-python -m portfolio_analyzer.portfolio_analyzer_mcp
-
-# For Store Analyzer (Port 8087)
+# Store Analyzer MCP (Port 8087)
 python -m store_analyzer.store_analyzer_mcp
+
+# Portfolio Analyzer MCP (Port 8088)
+python -m portfolio_analyzer.portfolio_analyzer_mcp
 ```
 
-## Environment Configuration
+---
 
-Each module contains a `sample.env` file with required environment variables. Copy this to `.env` and update the values as needed.
+## Authentication in Store Analyzer
+
+Store Analyzer supports user roles:
+- **Admin**: Username `admin`, Password `admin#123` (Full SQL inspection and memory management)
+- **User**: Username `hillyer`, Password `hillyer` (Natural language query execution)
+
+Access `http://localhost:8084/auth/login` to sign in.
+
+---
 
 ## License
 
-This project is licensed under the terms of the MIT license. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License.
