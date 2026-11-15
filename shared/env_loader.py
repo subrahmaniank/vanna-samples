@@ -34,6 +34,10 @@ class EnvironmentLoader:
         RelaxedSSLContext.configure_ssl()
 
         return {
+            # Vector Store Selector: 'qdrant', 'chromadb', 'faiss'
+            "vector_store": os.getenv("VECTOR_STORE", "").strip().lower(),
+            "vector_persist_dir": os.getenv("VECTOR_PERSIST_DIR", "").strip(),
+
             # Qdrant Cloud / Managed Service
             "qdrant_url": os.getenv("QDRANT_URL", "").strip(),
             "qdrant_api_key": os.getenv("QDRANT_API_KEY", "").strip() or None,

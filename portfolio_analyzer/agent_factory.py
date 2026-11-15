@@ -3,7 +3,7 @@ from typing import Optional, Dict, Any
 
 from shared.env_loader import EnvironmentLoader
 from shared.database_factory import create_sql_runner
-from shared.qdrant_agent_memory import QdrantAgentMemory
+from shared.vector_store_factory import create_agent_memory
 from portfolio_analyzer.user_resolver import PortfolioUserResolver
 
 try:
@@ -46,12 +46,8 @@ def create_agent(
     # 1. Database Runner (Snowflake, DuckDB, or Postgres)
     sql_runner = create_sql_runner(env_vars, default_db_name="SEI_DEMO")
 
-    # 2. Vector Tool Memory (Qdrant Service)
-    qdrant_memory = QdrantAgentMemory(
-        qdrant_url=env_vars.get("qdrant_url") or "http://localhost:6333",
-        qdrant_api_key=env_vars.get("qdrant_api_key"),
-        collection_prefix=collection_prefix
-    )
+    # 2. Vector Tool Memory (Qdrant, ChromaDB, or FAISS via create_agent_memory)
+    agent_memory = create_agent_memory(env_vars, collection_prefix=collection_prefix)
 
     # 3. LLM Service (Azure OpenAI)
     azure_endpoint = env_vars.get("azure_openai_endpoint") or None
@@ -114,7 +110,7 @@ def create_agent(
     agent = Agent(
         llm_service=llm_service,
         tool_registry=tool_registry,
-        agent_memory=qdrant_memory,
+        agent_memory=agent_memory,
         user_resolver=user_resolver,
         config=agent_config
     )

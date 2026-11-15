@@ -10,7 +10,10 @@ In version 2.0, Vanna has transitioned to a modular, user-aware Agent framework:
 - **`DuckDbRunner`**: High-performance embedded analytics runner for local files (`.duckdb`), in-memory (`:memory:`), or MotherDuck.
 - **`SnowflakeRunner`**: Cloud data warehouse runner utilizing `snowflake-connector-python[pandas]`.
 - **`PostgresRunner`**: PostgreSQL runner utilizing `psycopg2`.
+- **`AgentMemory` / `VectorStoreFactory`**: Dynamic vector store switching between **Qdrant Cloud**, **ChromaDB**, and **FAISS** via configuration.
 - **`QdrantAgentMemory`**: Cloud/service-connected vector store managing Tool Memory (past SQL examples) and Text Memory (DDL and schema documentation).
+- **`ChromaAgentMemory`**: Persistent local disk storage backed by ChromaDB.
+- **`FaissAgentMemory`**: High-performance in-memory and file-backed vector similarity search backed by FAISS.
 - **`UserResolver`**: Context-driven user authentication and Role-Based Access Control (RBAC).
 - **`VannaFastAPIServer`**: Serves the modern streaming UI (`<vanna-chat>`) and SSE endpoints.
 - **`FastMCP`**: Model Context Protocol servers exposing the agents to AI tools.

@@ -1,13 +1,14 @@
 from pathlib import Path
 from shared.env_loader import EnvironmentLoader
-from shared.qdrant_agent_memory import QdrantAgentMemory
+from shared.vector_store_factory import create_agent_memory
 from shared.memory_seeder import MemorySeederBridge
 
 
 class BaseTrainer:
     """
-    Base trainer for Store Analyzer (DVD Rental), backed by Vanna 2.0 QdrantAgentMemory.
-    Provides get_vn() returning a bridge that routes training into Qdrant.
+    Base trainer for Store Analyzer (DVD Rental), backed by Vanna 2.0 AgentMemory
+    (supporting Qdrant, ChromaDB, and FAISS via configuration).
+    Provides get_vn() returning a bridge that routes training into the vector store.
     """
 
     def __init__(self, collection_prefix: str = "dr"):
@@ -15,11 +16,7 @@ class BaseTrainer:
             module_path=Path(__file__).parent,
             default_db_name="DVDRENTAL"
         )
-        self.memory = QdrantAgentMemory(
-            qdrant_url=env_vars.get("qdrant_url") or "http://localhost:6333",
-            qdrant_api_key=env_vars.get("qdrant_api_key"),
-            collection_prefix=collection_prefix
-        )
+        self.memory = create_agent_memory(env_vars, collection_prefix=collection_prefix)
         self.vn = MemorySeederBridge(self.memory)
 
     def get_vn(self):
