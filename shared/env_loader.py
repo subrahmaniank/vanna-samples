@@ -38,6 +38,13 @@ class EnvironmentLoader:
             "qdrant_url": os.getenv("QDRANT_URL", "").strip(),
             "qdrant_api_key": os.getenv("QDRANT_API_KEY", "").strip() or None,
 
+            # Database Selector: 'duckdb', 'snowflake', 'postgres'
+            "database_type": os.getenv("DATABASE_TYPE", "").strip().lower(),
+
+            # DuckDB Configuration
+            "duckdb_path": os.getenv("DUCKDB_PATH", "").strip(),
+            "duckdb_read_only": os.getenv("DUCKDB_READ_ONLY", "false").lower() in ("true", "1", "yes"),
+
             # Snowflake Database Configuration
             "snowflake_account": os.getenv("SNOWFLAKE_ACCOUNT", "").strip(),
             "snowflake_user": os.getenv("SNOWFLAKE_USER", "").strip(),

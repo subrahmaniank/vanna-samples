@@ -6,7 +6,10 @@ A collection of sample applications demonstrating the use of **Vanna 2.0** for n
 
 In version 2.0, Vanna has transitioned to a modular, user-aware Agent framework:
 - **`Agent`**: The orchestrator coordinating LLM reasoning, permissions, and tool executions.
-- **`SnowflakeRunner`**: Executes queries against Snowflake data warehouses (with PostgreSQL fallback support).
+- **`SqlRunner` / `DatabaseFactory`**: Dynamic database switching between **DuckDB**, **Snowflake**, and **PostgreSQL** via configuration.
+- **`DuckDbRunner`**: High-performance embedded analytics runner for local files (`.duckdb`), in-memory (`:memory:`), or MotherDuck.
+- **`SnowflakeRunner`**: Cloud data warehouse runner utilizing `snowflake-connector-python[pandas]`.
+- **`PostgresRunner`**: PostgreSQL runner utilizing `psycopg2`.
 - **`QdrantAgentMemory`**: Cloud/service-connected vector store managing Tool Memory (past SQL examples) and Text Memory (DDL and schema documentation).
 - **`UserResolver`**: Context-driven user authentication and Role-Based Access Control (RBAC).
 - **`VannaFastAPIServer`**: Serves the modern streaming UI (`<vanna-chat>`) and SSE endpoints.
@@ -38,9 +41,11 @@ The repository contains three modules:
 - **Seeder**: `portfolio_analyzer/seed_memory.py`
 
 ### Shared Components (`shared/`)
-- `shared/qdrant_agent_memory.py`: Qdrant Cloud vector memory implementation
+- `shared/database_factory.py`: Central runner factory switching between DuckDB, Snowflake, and Postgres
+- `shared/duckdb_runner.py`: DuckDB SQL runner implementation
 - `shared/snowflake_runner.py`: Snowflake SQL runner implementation
 - `shared/postgres_runner.py`: PostgreSQL SQL runner implementation
+- `shared/qdrant_agent_memory.py`: Qdrant Cloud vector memory implementation
 - `shared/env_loader.py`: Unified `.env` loader supporting root and module levels
 - `shared/ssl_utils.py`: Enterprise CA bundle & relaxed SSL verification for Python 3.13
 

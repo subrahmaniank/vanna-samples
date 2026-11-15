@@ -2,8 +2,7 @@ from pathlib import Path
 from typing import Optional, Dict, Any
 
 from shared.env_loader import EnvironmentLoader
-from shared.snowflake_runner import SnowflakeRunner
-from shared.postgres_runner import PostgresRunner
+from shared.database_factory import create_sql_runner
 from shared.qdrant_agent_memory import QdrantAgentMemory
 from adventureworks.user_resolver import AdventureWorksUserResolver
 
@@ -45,25 +44,8 @@ def create_agent(
             default_db_name="ADVENTUREWORKS"
         )
 
-    # 1. Database Runner (Snowflake preferred, Postgres fallback)
-    if env_vars.get("snowflake_account"):
-        sql_runner = SnowflakeRunner(
-            account=env_vars["snowflake_account"],
-            user=env_vars["snowflake_user"],
-            password=env_vars["snowflake_password"],
-            database=env_vars.get("snowflake_database") or "ADVENTUREWORKS",
-            schema=env_vars.get("snowflake_schema") or "PUBLIC",
-            warehouse=env_vars.get("snowflake_warehouse") or "COMPUTE_WH",
-            role=env_vars.get("snowflake_role"),
-        )
-    else:
-        sql_runner = PostgresRunner(
-            host=env_vars["db_host"],
-            port=env_vars["db_port"],
-            dbname=env_vars["db_name"] or "AdventureWorksOLTP",
-            user=env_vars["db_username"],
-            password=env_vars["db_password"],
-        )
+    # 1. Database Runner (Snowflake, DuckDB, or Postgres)
+    sql_runner = create_sql_runner(env_vars, default_db_name="ADVENTUREWORKS")
 
     # 2. Vector Tool Memory (Qdrant Service)
     qdrant_memory = QdrantAgentMemory(
