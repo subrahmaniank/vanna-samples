@@ -10,7 +10,7 @@ import numpy as np
 from shared.qdrant_agent_memory import SimpleEmbeddingProvider
 
 try:
-    from vanna.capabilities.agent_memory.base import (
+    from vanna.capabilities.agent_memory import (
         AgentMemory,
         ToolMemory,
         TextMemory,
@@ -184,8 +184,10 @@ class FaissAgentMemory(AgentMemory):
 
             payload = {
                 "id": mem_id,
+                "memory_id": mem_id,
                 "content": content,
                 "created_at": now,
+                "timestamp": now,
                 "metadata": metadata or {}
             }
             self.text_payloads.append(payload)
@@ -196,10 +198,9 @@ class FaissAgentMemory(AgentMemory):
 
             self._save_to_disk()
             return TextMemory(
-                id=mem_id,
+                memory_id=mem_id,
                 content=content,
-                created_at=now,
-                metadata=metadata or {}
+                timestamp=now
             )
 
         return await asyncio.to_thread(_sync_save)
@@ -220,7 +221,7 @@ class FaissAgentMemory(AgentMemory):
             raw_query = self.embedding.embed_query(question)
             query_vec = self._normalize(np.array(raw_query, dtype=np.float32))
 
-            results: List[ToolMemorySearchResult] = []
+            candidates = []
             if self._has_faiss and self.tool_index.ntotal > 0:
                 k = min(limit * 2, self.tool_index.ntotal)
                 distances, indices = self.tool_index.search(np.array([query_vec]), k)
@@ -234,17 +235,8 @@ class FaissAgentMemory(AgentMemory):
                         continue
                     if tool_name_filter and p.get("tool_name") != tool_name_filter:
                         continue
-                    mem = ToolMemory(
-                        id=str(p.get("id")),
-                        question=p.get("question", ""),
-                        tool_name=p.get("tool_name", ""),
-                        args=p.get("args", {}),
-                        success=p.get("success", True),
-                        created_at=p.get("created_at", ""),
-                        metadata=p.get("metadata", {})
-                    )
-                    results.append(ToolMemorySearchResult(memory=mem, score=float(score)))
-                    if len(results) >= limit:
+                    candidates.append((float(score), p))
+                    if len(candidates) >= limit:
                         break
             else:
                 # NumPy fallback
@@ -256,19 +248,27 @@ class FaissAgentMemory(AgentMemory):
                     v_norm = self._normalize(np.array(v, dtype=np.float32))
                     score = float(np.dot(query_vec, v_norm))
                     if score >= similarity_threshold:
-                        mem = ToolMemory(
-                            id=str(p.get("id")),
-                            question=p.get("question", ""),
-                            tool_name=p.get("tool_name", ""),
-                            args=p.get("args", {}),
-                            success=p.get("success", True),
-                            created_at=p.get("created_at", ""),
-                            metadata=p.get("metadata", {})
-                        )
-                        results.append(ToolMemorySearchResult(memory=mem, score=score))
+                        candidates.append((score, p))
 
-                results.sort(key=lambda x: x.score, reverse=True)
-                results = results[:limit]
+                candidates.sort(key=lambda x: x[0], reverse=True)
+                candidates = candidates[:limit]
+
+            results: List[ToolMemorySearchResult] = []
+            for rank_idx, (score, p) in enumerate(candidates, start=1):
+                mem = ToolMemory(
+                    memory_id=str(p.get("memory_id", p.get("id"))),
+                    question=p.get("question", ""),
+                    tool_name=p.get("tool_name", ""),
+                    args=p.get("args", {}),
+                    success=p.get("success", True),
+                    timestamp=p.get("timestamp", p.get("created_at", "")),
+                    metadata=p.get("metadata", {})
+                )
+                results.append(ToolMemorySearchResult(
+                    memory=mem,
+                    similarity_score=score,
+                    rank=rank_idx
+                ))
 
             return results
 
@@ -289,7 +289,7 @@ class FaissAgentMemory(AgentMemory):
             raw_query = self.embedding.embed_query(query)
             query_vec = self._normalize(np.array(raw_query, dtype=np.float32))
 
-            results: List[TextMemorySearchResult] = []
+            candidates = []
             if self._has_faiss and self.text_index.ntotal > 0:
                 k = min(limit, self.text_index.ntotal)
                 distances, indices = self.text_index.search(np.array([query_vec]), k)
@@ -298,29 +298,29 @@ class FaissAgentMemory(AgentMemory):
                         continue
                     if score < similarity_threshold:
                         continue
-                    p = self.text_payloads[idx]
-                    mem = TextMemory(
-                        id=str(p.get("id")),
-                        content=p.get("content", ""),
-                        created_at=p.get("created_at", ""),
-                        metadata=p.get("metadata", {})
-                    )
-                    results.append(TextMemorySearchResult(memory=mem, score=float(score)))
+                    candidates.append((float(score), self.text_payloads[idx]))
             else:
                 for p, v in zip(self.text_payloads, self.text_vectors):
                     v_norm = self._normalize(np.array(v, dtype=np.float32))
                     score = float(np.dot(query_vec, v_norm))
                     if score >= similarity_threshold:
-                        mem = TextMemory(
-                            id=str(p.get("id")),
-                            content=p.get("content", ""),
-                            created_at=p.get("created_at", ""),
-                            metadata=p.get("metadata", {})
-                        )
-                        results.append(TextMemorySearchResult(memory=mem, score=score))
+                        candidates.append((score, p))
 
-                results.sort(key=lambda x: x.score, reverse=True)
-                results = results[:limit]
+                candidates.sort(key=lambda x: x[0], reverse=True)
+                candidates = candidates[:limit]
+
+            results: List[TextMemorySearchResult] = []
+            for rank_idx, (score, p) in enumerate(candidates, start=1):
+                mem = TextMemory(
+                    memory_id=str(p.get("memory_id", p.get("id"))),
+                    content=p.get("content", ""),
+                    timestamp=p.get("timestamp", p.get("created_at", ""))
+                )
+                results.append(TextMemorySearchResult(
+                    memory=mem,
+                    similarity_score=score,
+                    rank=rank_idx
+                ))
 
             return results
 
@@ -334,12 +334,12 @@ class FaissAgentMemory(AgentMemory):
         res = []
         for p in reversed(self.tool_payloads[-limit:]):
             res.append(ToolMemory(
-                id=str(p.get("id")),
+                memory_id=str(p.get("memory_id", p.get("id"))),
                 question=p.get("question", ""),
                 tool_name=p.get("tool_name", ""),
                 args=p.get("args", {}),
                 success=p.get("success", True),
-                created_at=p.get("created_at", ""),
+                timestamp=p.get("timestamp", p.get("created_at", "")),
                 metadata=p.get("metadata", {})
             ))
         return res
@@ -352,10 +352,9 @@ class FaissAgentMemory(AgentMemory):
         res = []
         for p in reversed(self.text_payloads[-limit:]):
             res.append(TextMemory(
-                id=str(p.get("id")),
+                memory_id=str(p.get("memory_id", p.get("id"))),
                 content=p.get("content", ""),
-                created_at=p.get("created_at", ""),
-                metadata=p.get("metadata", {})
+                timestamp=p.get("timestamp", p.get("created_at", ""))
             ))
         return res
 
@@ -369,7 +368,7 @@ class FaissAgentMemory(AgentMemory):
         self._save_to_disk()
         return True
 
-    async def clear(
+    async def clear_memories(
         self,
         context: Optional[ToolContext] = None,
         tool_name: Optional[str] = None,
@@ -384,3 +383,6 @@ class FaissAgentMemory(AgentMemory):
             self.text_index = self.faiss.IndexFlatIP(self.dimension)
         self._save_to_disk()
         return 1
+
+    # Alias for backwards-compatibility
+    clear = clear_memories

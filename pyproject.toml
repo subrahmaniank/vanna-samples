@@ -1,13 +1,16 @@
 [project]
 name = "vanna-samples"
 version = "2.0.0"
-description = "Vanna 2.0 Samples with Snowflake, Qdrant, and Azure OpenAI"
+description = "Vanna 2.0 Samples with DuckDB, Snowflake, Postgres, Qdrant, ChromaDB, FAISS, and AWS Bedrock Mantle / Azure OpenAI"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "python-dotenv>=1.0.0",
     "certifi>=2024.0.0",
+    "pydantic>=2.10.0,<2.11.0",
+    "starlette>=0.40.0,<0.48.0",
     "fastapi>=0.115.0",
+    "mcp>=1.12.0,<2.0.0",
     "fastmcp>=2.11.0",
     "uvicorn>=0.34.0",
     "vanna[fastapi,openai,snowflake]>=2.0.0",

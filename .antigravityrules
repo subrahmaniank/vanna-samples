@@ -1,0 +1,17 @@
+# Security & Secret Protection Rules (YOLO Mode)
+
+## 1. Strictly Forbidden Files (No Read, Write, or Print)
+Never read, inspect, parse, modify, delete, or echo the contents of the following files or directories, even when debugging configuration or authentication issues:
+- Environment & secret files: `.env`, `.env.*`, `*.env`, `secrets.*`, `*secret*`, `*credential*`, `*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.jks`
+- SSH & GPG keys: `~/.ssh/**`, `id_rsa*`, `id_ed25519*`, `known_hosts`, `authorized_keys`, `~/.gnupg/**`
+- Cloud & CLI auth configs: `~/.aws/**`, `~/.kube/**`, `~/.docker/config.json`, `~/.npmrc`, `~/.pypirc`, `~/.git-credentials`, `service-account*.json`
+
+## 2. Production & Infrastructure Boundaries
+- Treat any file or directory matching `*prod*`, `*production*`, `terraform.tfstate*`, `*.tfvars`, `k8s/prod/**`, or `deploy/prod/**` as **READ-ONLY**.
+- Never apply database migrations, infrastructure changes, or Helm/Kubernetes manifests targeting production environments.
+- If a task requires updating environment variables, modify only `.env.example` or `.env.template` using placeholder values (e.g., `API_KEY=your_api_key_here`).
+
+## 3. Terminal & Output Hygiene
+- Never run `env`, `printenv`, `set`, or `export -p` in the terminal, as they expose loaded environment secrets to the agent context.
+- Never pass raw tokens, passwords, or API keys directly in CLI arguments or commit messages.
+- Before staging or committing changes (`git add` / `git commit`), verify that no `.env` or key files are untracked and ready to be committed.

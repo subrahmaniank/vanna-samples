@@ -6,7 +6,7 @@ from qdrant_client import QdrantClient
 from qdrant_client.http import models as qmodels
 
 try:
-    from vanna.capabilities.agent_memory.base import (
+    from vanna.capabilities.agent_memory import (
         AgentMemory,
         ToolMemory,
         TextMemory,
@@ -127,6 +127,25 @@ class QdrantAgentMemory(AgentMemory):
                         )
                     except Exception:
                         pass
+
+            # Create payload index on tool_collection for strict mode filtering
+            try:
+                self.client.create_payload_index(
+                    collection_name=self.tool_collection,
+                    field_name="success",
+                    field_schema=qmodels.PayloadSchemaType.BOOL
+                )
+            except Exception:
+                pass
+            try:
+                self.client.create_payload_index(
+                    collection_name=self.tool_collection,
+                    field_name="tool_name",
+                    field_schema=qmodels.PayloadSchemaType.KEYWORD
+                )
+            except Exception:
+                pass
+
             self._collections_ensured = True
         except Exception:
             pass
@@ -147,11 +166,13 @@ class QdrantAgentMemory(AgentMemory):
 
             payload = {
                 "id": mem_id,
+                "memory_id": mem_id,
                 "question": question,
                 "tool_name": tool_name,
                 "args": args,
                 "success": success,
                 "created_at": now,
+                "timestamp": now,
                 "metadata": metadata or {}
             }
 
@@ -181,8 +202,10 @@ class QdrantAgentMemory(AgentMemory):
 
             payload = {
                 "id": mem_id,
+                "memory_id": mem_id,
                 "content": content,
                 "created_at": now,
+                "timestamp": now,
                 "metadata": metadata or {}
             }
 
@@ -197,10 +220,9 @@ class QdrantAgentMemory(AgentMemory):
                 ]
             )
             return TextMemory(
-                id=mem_id,
+                memory_id=mem_id,
                 content=content,
-                created_at=now,
-                metadata=metadata or {}
+                timestamp=now
             )
 
         return await asyncio.to_thread(_sync_save)
@@ -215,6 +237,7 @@ class QdrantAgentMemory(AgentMemory):
         tool_name_filter: Optional[str] = None
     ) -> List[ToolMemorySearchResult]:
         def _sync_search() -> List[ToolMemorySearchResult]:
+            self._ensure_collections()
             vector = self.embedding.embed_query(question)
             filter_conditions = [
                 qmodels.FieldCondition(
@@ -231,27 +254,34 @@ class QdrantAgentMemory(AgentMemory):
                 )
 
             query_filter = qmodels.Filter(must=filter_conditions)
-            hits = self.client.search(
-                collection_name=self.tool_collection,
-                query_vector=vector,
-                query_filter=query_filter,
-                limit=limit,
-                score_threshold=similarity_threshold
-            )
+            try:
+                hits = self.client.search(
+                    collection_name=self.tool_collection,
+                    query_vector=vector,
+                    query_filter=query_filter,
+                    limit=limit,
+                    score_threshold=similarity_threshold
+                )
+            except Exception:
+                return []
 
             results = []
-            for hit in hits:
+            for idx, hit in enumerate(hits):
                 p = hit.payload or {}
                 mem = ToolMemory(
-                    id=str(p.get("id", hit.id)),
+                    memory_id=str(p.get("memory_id", p.get("id", hit.id))),
                     question=p.get("question", ""),
                     tool_name=p.get("tool_name", ""),
                     args=p.get("args", {}),
                     success=p.get("success", True),
-                    created_at=p.get("created_at", ""),
+                    timestamp=p.get("timestamp", p.get("created_at", "")),
                     metadata=p.get("metadata", {})
                 )
-                results.append(ToolMemorySearchResult(memory=mem, score=hit.score))
+                results.append(ToolMemorySearchResult(
+                    memory=mem,
+                    similarity_score=float(hit.score),
+                    rank=idx + 1
+                ))
             return results
 
         return await asyncio.to_thread(_sync_search)
@@ -265,24 +295,31 @@ class QdrantAgentMemory(AgentMemory):
         similarity_threshold: float = 0.7
     ) -> List[TextMemorySearchResult]:
         def _sync_search() -> List[TextMemorySearchResult]:
+            self._ensure_collections()
             vector = self.embedding.embed_query(query)
-            hits = self.client.search(
-                collection_name=self.text_collection,
-                query_vector=vector,
-                limit=limit,
-                score_threshold=similarity_threshold
-            )
+            try:
+                hits = self.client.search(
+                    collection_name=self.text_collection,
+                    query_vector=vector,
+                    limit=limit,
+                    score_threshold=similarity_threshold
+                )
+            except Exception:
+                return []
 
             results = []
-            for hit in hits:
+            for idx, hit in enumerate(hits):
                 p = hit.payload or {}
                 mem = TextMemory(
-                    id=str(p.get("id", hit.id)),
+                    memory_id=str(p.get("memory_id", p.get("id", hit.id))),
                     content=p.get("content", ""),
-                    created_at=p.get("created_at", ""),
-                    metadata=p.get("metadata", {})
+                    timestamp=p.get("timestamp", p.get("created_at", ""))
                 )
-                results.append(TextMemorySearchResult(memory=mem, score=hit.score))
+                results.append(TextMemorySearchResult(
+                    memory=mem,
+                    similarity_score=float(hit.score),
+                    rank=idx + 1
+                ))
             return results
 
         return await asyncio.to_thread(_sync_search)
@@ -293,22 +330,26 @@ class QdrantAgentMemory(AgentMemory):
         limit: int = 10
     ) -> List[ToolMemory]:
         def _sync_get() -> List[ToolMemory]:
-            records, _ = self.client.scroll(
-                collection_name=self.tool_collection,
-                limit=limit,
-                with_payload=True
-            )
+            self._ensure_collections()
+            try:
+                records, _ = self.client.scroll(
+                    collection_name=self.tool_collection,
+                    limit=limit,
+                    with_payload=True
+                )
+            except Exception:
+                return []
             res = []
             for r in records:
                 p = r.payload or {}
                 res.append(
                     ToolMemory(
-                        id=str(p.get("id", r.id)),
+                        memory_id=str(p.get("memory_id", p.get("id", r.id))),
                         question=p.get("question", ""),
                         tool_name=p.get("tool_name", ""),
                         args=p.get("args", {}),
                         success=p.get("success", True),
-                        created_at=p.get("created_at", ""),
+                        timestamp=p.get("timestamp", p.get("created_at", "")),
                         metadata=p.get("metadata", {})
                     )
                 )
@@ -322,20 +363,23 @@ class QdrantAgentMemory(AgentMemory):
         limit: int = 10
     ) -> List[TextMemory]:
         def _sync_get() -> List[TextMemory]:
-            records, _ = self.client.scroll(
-                collection_name=self.text_collection,
-                limit=limit,
-                with_payload=True
-            )
+            self._ensure_collections()
+            try:
+                records, _ = self.client.scroll(
+                    collection_name=self.text_collection,
+                    limit=limit,
+                    with_payload=True
+                )
+            except Exception:
+                return []
             res = []
             for r in records:
                 p = r.payload or {}
                 res.append(
                     TextMemory(
-                        id=str(p.get("id", r.id)),
+                        memory_id=str(p.get("memory_id", p.get("id", r.id))),
                         content=p.get("content", ""),
-                        created_at=p.get("created_at", ""),
-                        metadata=p.get("metadata", {})
+                        timestamp=p.get("timestamp", p.get("created_at", ""))
                     )
                 )
             return res
@@ -362,7 +406,7 @@ class QdrantAgentMemory(AgentMemory):
 
         return await asyncio.to_thread(_sync_delete)
 
-    async def clear(
+    async def clear_memories(
         self,
         context: Optional[ToolContext] = None,
         tool_name: Optional[str] = None,
@@ -379,3 +423,6 @@ class QdrantAgentMemory(AgentMemory):
             return 1
 
         return await asyncio.to_thread(_sync_clear)
+
+    # Alias for backwards-compatibility
+    clear = clear_memories

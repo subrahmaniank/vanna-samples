@@ -1,5 +1,8 @@
 import asyncio
-from fastmcp import FastMCP
+try:
+    from fastmcp import FastMCP
+except (ImportError, AttributeError):
+    from mcp.server.fastmcp import FastMCP
 from adventureworks.agent_factory import create_agent
 
 try:
@@ -20,7 +23,7 @@ class AdventureWorksMCP:
         self._register_tools()
 
     def _register_tools(self):
-        @self.mcp.tool
+        @self.mcp.tool()
         async def query_order_analyzer(question: str) -> dict:
             """
             Query the order management system with a question

@@ -12,3 +12,9 @@ wheels/
 .dockerignore
 
 .env
+*.duckdb
+*_vector_store/
+vector_store/
+query_results_*.csv
+.vanna_fs/
+bc35da1745126afe/

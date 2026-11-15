@@ -1,4 +1,5 @@
 import asyncio
+import re
 from typing import Dict, Any, Optional
 import pandas as pd
 
@@ -38,14 +39,39 @@ class DuckDbRunner(SqlRunner):
                 "duckdb package is required to use DuckDbRunner. "
                 "Install it with: pip install duckdb"
             )
-        return duckdb.connect(
+        conn = duckdb.connect(
             database=self.database_path,
             read_only=self.read_only,
             config=self.config
         )
+        # Configure search_path to discover tables across all schemas without requiring schema prefix
+        try:
+            schemata = conn.execute(
+                "SELECT schema_name FROM information_schema.schemata WHERE schema_name NOT IN ('information_schema', 'pg_catalog')"
+            ).fetchall()
+            if schemata:
+                schema_names = [s[0] for s in schemata if s[0]]
+                for def_s in ["public", "main"]:
+                    if def_s not in schema_names:
+                        schema_names.append(def_s)
+                search_path = ",".join(schema_names)
+                conn.execute(f"SET search_path = '{search_path}'")
+        except Exception:
+            pass
+        return conn
 
     def _execute_query_sync(self, sql: str) -> pd.DataFrame:
         cleaned_sql = sql.strip().rstrip(";")
+        # Normalize T-SQL square brackets [col] or [schema].[table] to ANSI double quotes "col"
+        cleaned_sql = re.sub(r"\[([^\]\r\n]+)\]", r'"\1"', cleaned_sql)
+        # Normalize T-SQL SELECT TOP n to LIMIT n if applicable
+        top_match = re.search(r"(?i)^\s*SELECT\s+TOP\s+(\d+)\s+", cleaned_sql)
+        if top_match:
+            limit_n = top_match.group(1)
+            cleaned_sql = re.sub(r"(?i)^\s*SELECT\s+TOP\s+\d+\s+", "SELECT ", cleaned_sql)
+            if not re.search(r"(?i)\bLIMIT\s+\d+\b", cleaned_sql):
+                cleaned_sql = f"{cleaned_sql} LIMIT {limit_n}"
+
         conn = self._get_connection()
         try:
             rel = conn.execute(cleaned_sql)

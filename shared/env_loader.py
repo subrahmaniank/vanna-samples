@@ -7,9 +7,9 @@ from shared.ssl_utils import RelaxedSSLContext
 
 class EnvironmentLoader:
     """
-    Loads configuration from module-level or root-level .env files,
-    configures SSL context and certificates, and provides environment dict
-    for Snowflake, Qdrant Cloud, and Azure OpenAI.
+    Loads configuration strictly from the module-level .env file,
+    resolving module-local paths for DuckDB database files and vector store persist directories.
+    Configures SSL context and certificates for Python 3.13.
     """
 
     @staticmethod
@@ -17,36 +17,56 @@ class EnvironmentLoader:
         module_path: Optional[Path] = None,
         default_db_name: Optional[str] = None
     ) -> Dict[str, Any]:
-        # 1. Load root-level .env if present
-        root_dir = Path(__file__).resolve().parent.parent
-        root_env = root_dir / ".env"
-        if root_env.exists():
-            load_dotenv(dotenv_path=root_env, override=False)
-
-        # 2. Load module-level .env if specified (takes precedence)
+        # Determine module directory
         if module_path:
             module_dir = module_path if module_path.is_dir() else module_path.parent
-            module_env = module_dir / ".env"
-            if module_env.exists():
-                load_dotenv(dotenv_path=module_env, override=True)
+        else:
+            module_dir = Path.cwd()
+
+        # Load strictly from module-level .env
+        module_env = module_dir / ".env"
+        if module_env.exists():
+            load_dotenv(dotenv_path=module_env, override=True)
 
         # 3. Configure SSL context and CA bundles
         RelaxedSSLContext.configure_ssl()
 
+        # Resolve vector persist dir relative to module folder
+        raw_vector_dir = os.getenv("VECTOR_PERSIST_DIR", "").strip() or "./vector_store"
+        p_vector = Path(raw_vector_dir)
+        if not p_vector.is_absolute():
+            vector_persist_dir = str((module_dir / p_vector).resolve())
+        else:
+            vector_persist_dir = str(p_vector.resolve())
+
+        # Resolve duckdb path relative to module folder
+        raw_duckdb_path = os.getenv("DUCKDB_PATH", "").strip()
+        if not raw_duckdb_path and default_db_name:
+            raw_duckdb_path = f"{default_db_name.lower()}.duckdb"
+
+        if raw_duckdb_path and raw_duckdb_path != ":memory:":
+            p_duckdb = Path(raw_duckdb_path)
+            if not p_duckdb.is_absolute():
+                duckdb_path = str((module_dir / p_duckdb).resolve())
+            else:
+                duckdb_path = str(p_duckdb.resolve())
+        else:
+            duckdb_path = raw_duckdb_path
+
         return {
             # Vector Store Selector: 'qdrant', 'chromadb', 'faiss'
-            "vector_store": os.getenv("VECTOR_STORE", "").strip().lower(),
-            "vector_persist_dir": os.getenv("VECTOR_PERSIST_DIR", "").strip(),
+            "vector_store": os.getenv("VECTOR_STORE", "qdrant").strip().lower(),
+            "vector_persist_dir": vector_persist_dir,
 
             # Qdrant Cloud / Managed Service
             "qdrant_url": os.getenv("QDRANT_URL", "").strip(),
             "qdrant_api_key": os.getenv("QDRANT_API_KEY", "").strip() or None,
 
             # Database Selector: 'duckdb', 'snowflake', 'postgres'
-            "database_type": os.getenv("DATABASE_TYPE", "").strip().lower(),
+            "database_type": os.getenv("DATABASE_TYPE", "duckdb").strip().lower(),
 
             # DuckDB Configuration
-            "duckdb_path": os.getenv("DUCKDB_PATH", "").strip(),
+            "duckdb_path": duckdb_path,
             "duckdb_read_only": os.getenv("DUCKDB_READ_ONLY", "false").lower() in ("true", "1", "yes"),
 
             # Snowflake Database Configuration
@@ -64,6 +84,23 @@ class EnvironmentLoader:
             "db_name": os.getenv("POSTGRES_DATABASE", default_db_name or "").strip(),
             "db_username": os.getenv("POSTGRES_USERNAME", "postgres").strip(),
             "db_password": os.getenv("POSTGRES_PASSWORD", "").strip(),
+
+            # LLM Provider: 'openrouter', 'bedrock_mantle', 'azure_openai', 'openai'
+            "llm_provider": os.getenv("LLM_PROVIDER", "").strip().lower(),
+
+            # OpenRouter (Unified API endpoint)
+            "openrouter_api_key": os.getenv("OPENROUTER_API_KEY", "").strip() or None,
+            "openrouter_model": os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet").strip(),
+            "openrouter_base_url": os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").strip(),
+            "openrouter_site_url": os.getenv("OPENROUTER_SITE_URL", os.getenv("OR_SITE_URL", "")).strip(),
+            "openrouter_app_name": os.getenv("OPENROUTER_APP_NAME", os.getenv("OR_APP_NAME", "Vanna 2.0 SQL Agent")).strip(),
+
+            # AWS Bedrock Mantle Endpoint & Credentials
+            "bedrock_mantle_endpoint": os.getenv("BEDROCK_MANTLE_ENDPOINT", os.getenv("AWS_BEDROCK_MANTLE_ENDPOINT", "")).strip(),
+            "bedrock_mantle_api_key": os.getenv("BEDROCK_MANTLE_API_KEY", os.getenv("AWS_BEDROCK_API_KEY", "")).strip() or None,
+            "bedrock_mantle_model": os.getenv("BEDROCK_MANTLE_MODEL", os.getenv("AWS_BEDROCK_MODEL", "anthropic.claude-3-5-sonnet-20241022-v2:0")).strip(),
+            "bedrock_mantle_project_id": os.getenv("BEDROCK_MANTLE_PROJECT_ID", "").strip() or None,
+            "bedrock_region": os.getenv("AWS_REGION", os.getenv("AWS_DEFAULT_REGION", "us-east-1")).strip(),
 
             # Azure OpenAI
             "azure_openai_endpoint": os.getenv("AZURE_OPENAI_ENDPOINT", "").strip(),

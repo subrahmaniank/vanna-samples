@@ -4,14 +4,22 @@ from typing import Optional, Dict, Any
 from shared.env_loader import EnvironmentLoader
 from shared.database_factory import create_sql_runner
 from shared.vector_store_factory import create_agent_memory
+from shared.llm_factory import create_llm_service
+from shared.system_prompt_builder import (
+    EnhancedSystemPromptBuilder,
+    EnhancedVisualizeDataTool,
+    ADVENTUREWORKS_GUIDELINES,
+)
 from adventureworks.user_resolver import AdventureWorksUserResolver
+
+
 
 try:
     from vanna import Agent, AgentConfig
     from vanna.core.agent.config import UiFeatures
     from vanna.core.registry import ToolRegistry
-    from vanna.integrations.openai import OpenAILlmService
-    from vanna.tools import RunSqlTool
+    from vanna.tools import RunSqlTool, VisualizeDataTool
+    from vanna.integrations.local import LocalFileSystem
     from vanna.tools.agent_memory import (
         SearchSavedCorrectToolUsesTool,
         SaveQuestionToolArgsTool,
@@ -23,11 +31,13 @@ except ImportError:
     AgentConfig = None
     UiFeatures = None
     ToolRegistry = None
-    OpenAILlmService = None
     RunSqlTool = None
+    VisualizeDataTool = None
+    LocalFileSystem = None
     SearchSavedCorrectToolUsesTool = None
     SaveQuestionToolArgsTool = None
     SaveTextMemoryTool = None
+
 
 
 def create_agent(
@@ -36,7 +46,7 @@ def create_agent(
 ) -> Any:
     """
     Factory creating a fully configured Vanna 2.0 Agent for AdventureWorks.
-    Uses Snowflake (with Postgres fallback), Qdrant Cloud service, and Azure OpenAI.
+    Supports Snowflake/DuckDB/Postgres, Qdrant/ChromaDB/FAISS, and Bedrock Mantle/Azure/OpenAI.
     """
     if env_vars is None:
         env_vars = EnvironmentLoader.load_environment_variables(
@@ -50,27 +60,31 @@ def create_agent(
     # 2. Vector Tool Memory (Qdrant, ChromaDB, or FAISS via create_agent_memory)
     agent_memory = create_agent_memory(env_vars, collection_prefix=collection_prefix)
 
-    # 3. LLM Service (Azure OpenAI)
-    # OpenAILlmService supports base_url for Azure OpenAI endpoints
-    azure_endpoint = env_vars.get("azure_openai_endpoint") or None
-    if azure_endpoint and not azure_endpoint.endswith("/"):
-        azure_endpoint = azure_endpoint + "/"
+    # 3. LLM Service (AWS Bedrock Mantle, Azure OpenAI, or standard OpenAI)
+    llm_service = create_llm_service(env_vars)
 
-    llm_service = OpenAILlmService(
-        model=env_vars.get("azure_openai_model") or "gpt-4o-mini",
-        api_key=env_vars.get("azure_openai_key") or "dummy-key",
-        base_url=azure_endpoint,
-    ) if OpenAILlmService else None
+    # 4. Local FileSystem for Query Results and Visualizations
+    fs_dir = Path(__file__).parent / ".vanna_fs"
+    fs_dir.mkdir(parents=True, exist_ok=True)
+    file_system = LocalFileSystem(working_directory=fs_dir) if LocalFileSystem else None
 
-    # 4. Tool Registry & Permissions
+    # 5. Tool Registry & Permissions
     tool_registry = ToolRegistry() if ToolRegistry else None
     if tool_registry:
-        # Register RunSqlTool
+        # Register RunSqlTool with file_system for exporting query CSVs
         if RunSqlTool:
             tool_registry.register_local_tool(
-                RunSqlTool(sql_runner=sql_runner),
+                RunSqlTool(sql_runner=sql_runner, file_system=file_system),
                 access_groups=["user", "admin"]
             )
+        # Register VisualizeDataTool for native Plotly charts in UI
+        viz_tool_cls = EnhancedVisualizeDataTool if EnhancedVisualizeDataTool else VisualizeDataTool
+        if viz_tool_cls:
+            tool_registry.register_local_tool(
+                viz_tool_cls(file_system=file_system),
+                access_groups=["user", "admin"]
+            )
+
         # Register Memory tools
         if SearchSavedCorrectToolUsesTool:
             tool_registry.register_local_tool(
@@ -78,20 +92,29 @@ def create_agent(
                 access_groups=["user", "admin"]
             )
         if SaveQuestionToolArgsTool:
+            class SaveQuestionToolUsesAlias(SaveQuestionToolArgsTool):
+                @property
+                def name(self) -> str:
+                    return "save_question_tool_uses"
+
             tool_registry.register_local_tool(
                 SaveQuestionToolArgsTool(),
-                access_groups=["admin"]
+                access_groups=["user", "admin"]
+            )
+            tool_registry.register_local_tool(
+                SaveQuestionToolUsesAlias(),
+                access_groups=["user", "admin"]
             )
         if SaveTextMemoryTool:
             tool_registry.register_local_tool(
                 SaveTextMemoryTool(),
-                access_groups=["admin"]
+                access_groups=["user", "admin"]
             )
 
-    # 5. User Resolver
+    # 6. User Resolver
     user_resolver = AdventureWorksUserResolver()
 
-    # 6. Agent Configuration & UI Features
+    # 7. Agent Configuration & UI Features
     ui_features = UiFeatures(
         feature_group_access={
             "tool_names": ["admin"],
@@ -108,6 +131,11 @@ def create_agent(
         ui_features=ui_features
     ) if AgentConfig else None
 
+    # 8. Enhanced System Prompt Builder (Schema qualification & native UI charting)
+    system_prompt_builder = EnhancedSystemPromptBuilder(
+        db_guidelines=ADVENTUREWORKS_GUIDELINES
+    )
+
     if Agent is None:
         raise RuntimeError("Vanna 2.0 is not installed or could not be imported.")
 
@@ -116,6 +144,8 @@ def create_agent(
         tool_registry=tool_registry,
         agent_memory=agent_memory,
         user_resolver=user_resolver,
-        config=agent_config
+        config=agent_config,
+        system_prompt_builder=system_prompt_builder
     )
     return agent
+

@@ -65,21 +65,31 @@ cp sample.env .env
 Configure the following variables in `.env`:
 
 ```env
-# Snowflake Database Configuration
-SNOWFLAKE_ACCOUNT=your_account.region
-SNOWFLAKE_USER=your_user
-SNOWFLAKE_PASSWORD=your_password
-SNOWFLAKE_DATABASE=ADVENTUREWORKS  # or DVDRENTAL, SEI_DEMO
-SNOWFLAKE_SCHEMA=PUBLIC
-SNOWFLAKE_WAREHOUSE=COMPUTE_WH
-SNOWFLAKE_ROLE=
+# -------------------------------------------------------------
+# Active Database Selector: 'duckdb' | 'snowflake' | 'postgres'
+# -------------------------------------------------------------
+DATABASE_TYPE=duckdb
+DUCKDB_PATH=adventureworks.duckdb
 
-# Qdrant Cloud / Managed Service
+# -------------------------------------------------------------
+# Active Vector Store Selector: 'qdrant' | 'chromadb' | 'faiss'
+# -------------------------------------------------------------
+VECTOR_STORE=qdrant
 QDRANT_URL=https://<cluster-id>.<region>.gcp.cloud.qdrant.io:6333
 QDRANT_API_KEY=your_qdrant_api_key
 
-# Azure OpenAI
-LLM_ENV=openai
+# -------------------------------------------------------------
+# Active LLM Provider Selector: 'bedrock_mantle' | 'azure_openai' | 'openai'
+# -------------------------------------------------------------
+LLM_PROVIDER=bedrock_mantle
+
+# 1. AWS Bedrock Mantle (Native OpenAI-compatible endpoint)
+BEDROCK_MANTLE_ENDPOINT=https://bedrock-mantle.us-east-1.api.aws/v1
+BEDROCK_MANTLE_API_KEY=your_bedrock_api_key
+BEDROCK_MANTLE_MODEL=anthropic.claude-3-5-sonnet-20241022-v2:0
+AWS_REGION=us-east-1
+
+# 2. Azure OpenAI (alternative)
 AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
 AZURE_OPENAI_API_KEY=your_azure_key
 AZURE_OPENAI_MODEL=gpt-4o-mini

@@ -1,4 +1,7 @@
-from fastmcp import FastMCP
+try:
+    from fastmcp import FastMCP
+except (ImportError, AttributeError):
+    from mcp.server.fastmcp import FastMCP
 from portfolio_analyzer.agent_factory import create_agent
 
 try:
@@ -19,7 +22,7 @@ class PortfolioAnalyzerMCP:
         self._register_tools()
 
     def _register_tools(self):
-        @self.mcp.tool
+        @self.mcp.tool()
         async def query_portfolio_analyzer(question: str) -> dict:
             """
             Query the portfolio analyzer with a question
