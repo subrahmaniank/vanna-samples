@@ -22,7 +22,7 @@ In version 2.0, Vanna has transitioned to a modular, user-aware Agent framework:
 
 ## Project Structure
 
-The repository contains three modules:
+The repository contains four modules:
 
 ### 1. AdventureWorks Module (`adventureworks/`)
 - **Domain**: Order management, purchasing, sales, and inventory
@@ -42,6 +42,13 @@ The repository contains three modules:
 - **Server**: `portfolio_analyzer/portfolio_analyzer_server.py` (Port `8085`)
 - **MCP Server**: `portfolio_analyzer/portfolio_analyzer_mcp.py` (Port `8088`)
 - **Seeder**: `portfolio_analyzer/seed_memory.py`
+
+### 4. Auto Finance Module (`auto_finance/`)
+- **Domain**: Synthetic auto loan originations, delinquency, payments, collections, and refunds
+- **Server**: `auto_finance/auto_finance_server.py` (Port `8090`)
+- **MCP Server**: `auto_finance/auto_finance_mcp.py` (Port `8091`)
+- **Seeder**: `auto_finance/seed_memory.py`
+- **Database**: `auto_finance/auto_finance.duckdb`, built in the sibling `duckdb-setup` repository
 
 ### Shared Components (`shared/`)
 - `shared/database_factory.py`: Central runner factory switching between DuckDB, Snowflake, and Postgres
@@ -114,6 +121,9 @@ python -m store_analyzer.seed_memory
 
 # Seed Portfolio Analyzer
 python -m portfolio_analyzer.seed_memory
+
+# Seed Auto Finance
+python -m auto_finance.seed_memory
 ```
 
 ---
@@ -141,6 +151,9 @@ python -m store_analyzer.store_analyzer_server
 
 # Portfolio Analyzer (Port 8085)
 python -m portfolio_analyzer.portfolio_analyzer_server
+
+# Auto Finance (Port 8090)
+python -m auto_finance.auto_finance_server
 ```
 
 Or using uvicorn directly:
@@ -161,6 +174,9 @@ python -m store_analyzer.store_analyzer_mcp
 
 # Portfolio Analyzer MCP (Port 8088)
 python -m portfolio_analyzer.portfolio_analyzer_mcp
+
+# Auto Finance MCP (Port 8091)
+python -m auto_finance.auto_finance_mcp
 ```
 
 ---

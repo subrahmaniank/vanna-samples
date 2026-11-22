@@ -99,6 +99,9 @@ class QdrantAgentMemory(AgentMemory):
         self.client = client or QdrantClient(
             url=self.qdrant_url,
             api_key=self.qdrant_api_key,
+            # QdrantClient otherwise chooses 6333 for an HTTPS URL without a
+            # port. Standard HTTPS (443) works through corporate proxies.
+            port=443 if self.qdrant_url.startswith("https://") else 6333,
             check_compatibility=False,
             timeout=5.0
         )
