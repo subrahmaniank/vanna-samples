@@ -1,4 +1,6 @@
 from shared.ssl_utils import RelaxedSSLContext
+
+RelaxedSSLContext.configure_ssl()
 from shared.env_loader import EnvironmentLoader
 from shared.postgres_runner import PostgresRunner
 from shared.snowflake_runner import SnowflakeRunner

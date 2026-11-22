@@ -125,7 +125,7 @@ def create_agent(
     ) if UiFeatures else None
 
     agent_config = AgentConfig(
-        max_tool_iterations=10,
+        max_tool_iterations=int(env_vars.get("max_tool_iterations", 25)),
         stream_responses=True,
         include_thinking_indicators=True,
         ui_features=ui_features

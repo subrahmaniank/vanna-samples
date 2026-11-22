@@ -50,7 +50,7 @@ The repository contains three modules:
 - `shared/postgres_runner.py`: PostgreSQL SQL runner implementation
 - `shared/qdrant_agent_memory.py`: Qdrant Cloud vector memory implementation
 - `shared/env_loader.py`: Unified `.env` loader supporting root and module levels
-- `shared/ssl_utils.py`: Enterprise CA bundle & relaxed SSL verification for Python 3.13
+- `shared/ssl_utils.py`: System certificate trust for outbound HTTPS
 
 ---
 
@@ -75,6 +75,7 @@ DUCKDB_PATH=adventureworks.duckdb
 # Active Vector Store Selector: 'qdrant' | 'chromadb' | 'faiss'
 # -------------------------------------------------------------
 VECTOR_STORE=qdrant
+VANNA_MAX_TOOL_ITERATIONS=25
 QDRANT_URL=https://<cluster-id>.<region>.gcp.cloud.qdrant.io:6333
 QDRANT_API_KEY=your_qdrant_api_key
 
@@ -96,6 +97,8 @@ AZURE_OPENAI_MODEL=gpt-4o-mini
 AZURE_OPENAI_API_VERSION=2024-12-01-preview
 ```
 
+`VANNA_MAX_TOOL_ITERATIONS` sets the maximum number of tool executions per chat response. The default is 25; increase it in the module's `.env` if a task still reaches the limit, then restart the server.
+
 ---
 
 ## Seeding Memory (DDL, Docs, and SQL)
@@ -116,6 +119,14 @@ python -m portfolio_analyzer.seed_memory
 ---
 
 ## Running the Servers
+
+### Corporate proxy certificates
+
+The servers use `truststore` to verify HTTPS certificates against the operating system trust store. On Windows, install your organization's Zscaler **root CA certificate** in **Trusted Root Certification Authorities** (Current User or Local Machine). If your organization provides an intermediate CA certificate, install it in **Intermediate Certification Authorities**. Use your organization's approved certificate installation process.
+
+Install the project dependencies with `uv sync`, then restart the server. The same system trust applies to the Hugging Face model download, the LLM endpoint, and remote Qdrant HTTPS requests. If `SSL_CERT_FILE` or `REQUESTS_CA_BUNDLE` is set to a bundle without the Zscaler CA, remove those overrides before launching the server.
+
+The first Qdrant query still downloads the FastEmbed model to the local machine; Qdrant being remote does not remove that download. The `datetime.utcnow()` warnings in the logs are unrelated to the TLS error.
 
 ### 1. Web & API Servers (VannaFastAPIServer)
 

@@ -17,4 +17,6 @@ wheels/
 vector_store/
 query_results_*.csv
 .vanna_fs/
-bc35da1745126afe/
+bc35da1745126afe/
+# graphify-axet
+.graphify/

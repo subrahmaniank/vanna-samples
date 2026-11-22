@@ -9,7 +9,7 @@ class EnvironmentLoader:
     """
     Loads configuration strictly from the module-level .env file,
     resolving module-local paths for DuckDB database files and vector store persist directories.
-    Configures SSL context and certificates for Python 3.13.
+    Uses the operating system trust store for outbound HTTPS.
     """
 
     @staticmethod
@@ -28,7 +28,7 @@ class EnvironmentLoader:
         if module_env.exists():
             load_dotenv(dotenv_path=module_env, override=True)
 
-        # 3. Configure SSL context and CA bundles
+        # Configure the system trust store before HTTP clients are created.
         RelaxedSSLContext.configure_ssl()
 
         # Resolve vector persist dir relative to module folder
@@ -54,6 +54,9 @@ class EnvironmentLoader:
             duckdb_path = raw_duckdb_path
 
         return {
+            # Maximum tool executions allowed for one chat response.
+            "max_tool_iterations": int(os.getenv("VANNA_MAX_TOOL_ITERATIONS", "25")),
+
             # Vector Store Selector: 'qdrant', 'chromadb', 'faiss'
             "vector_store": os.getenv("VECTOR_STORE", "qdrant").strip().lower(),
             "vector_persist_dir": vector_persist_dir,
