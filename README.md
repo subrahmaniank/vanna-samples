@@ -28,6 +28,7 @@ The repository contains four modules:
 - **Domain**: Order management, purchasing, sales, and inventory
 - **Server**: `adventureworks/adventureworks_server.py` (Port `8086`)
 - **MCP Server**: `adventureworks/adventureworks_mcp.py` (Port `8089`)
+- **Entry Points**: `adventureworks/adventureworks_app.py`, `adventureworks/adventureworks_api.py` (port 8083)
 - **Seeder**: `adventureworks/seed_memory.py`
 
 ### 2. Store Analyzer Module (`store_analyzer/`)
@@ -35,18 +36,21 @@ The repository contains four modules:
 - **Auth**: RBAC with cookie-based user resolver (`admin` and `hillyer` roles)
 - **Server**: `store_analyzer/store_analyzer_server.py` (Port `8084`)
 - **MCP Server**: `store_analyzer/store_analyzer_mcp.py` (Port `8087`)
+- **Entry Points**: `store_analyzer/store_analyzer_app.py`, `store_analyzer/store_analyzer_api.py` (port 8081)
 - **Seeder**: `store_analyzer/seed_memory.py`
 
 ### 3. Portfolio Analyzer Module (`portfolio_analyzer/`)
 - **Domain**: Investment portfolios, assets, transactions, and performance metrics
 - **Server**: `portfolio_analyzer/portfolio_analyzer_server.py` (Port `8085`)
 - **MCP Server**: `portfolio_analyzer/portfolio_analyzer_mcp.py` (Port `8088`)
+- **Entry Points**: `portfolio_analyzer/portfolio_analyzer_app.py`, `portfolio_analyzer/portfolio_analyzer_api.py` (port 8082)
 - **Seeder**: `portfolio_analyzer/seed_memory.py`
 
 ### 4. Auto Finance Module (`auto_finance/`)
 - **Domain**: Synthetic auto loan originations, delinquency, payments, collections, and refunds
 - **Server**: `auto_finance/auto_finance_server.py` (Port `8090`)
 - **MCP Server**: `auto_finance/auto_finance_mcp.py` (Port `8091`)
+- **Tools**: `auto_finance/sql_tool.py` (custom SQL tool with CTE support)
 - **Seeder**: `auto_finance/seed_memory.py`
 - **Database**: `auto_finance/auto_finance.duckdb`, built in the sibling `duckdb-setup` repository
 
@@ -56,8 +60,14 @@ The repository contains four modules:
 - `shared/snowflake_runner.py`: Snowflake SQL runner implementation
 - `shared/postgres_runner.py`: PostgreSQL SQL runner implementation
 - `shared/qdrant_agent_memory.py`: Qdrant Cloud vector memory implementation
+- `shared/faiss_agent_memory.py`: FAISS high-performance vector memory implementation
+- `shared/chroma_agent_memory.py`: ChromaDB persistent memory implementation
 - `shared/env_loader.py`: Unified `.env` loader supporting root and module levels
 - `shared/ssl_utils.py`: System certificate trust for outbound HTTPS
+- `shared/memory_seeder.py`: Bridge for legacy `vn.train()` calls into Vanna 2.0 QdrantAgentMemory
+- `shared/llm_factory.py`: LLM service factory supporting OpenRouter, Bedrock Mantle, Azure OpenAI, and OpenAI
+- `shared/system_prompt_builder.py`: Enhanced system prompt builder with schema qualification and native UI charting
+- `shared/chart_generator.py`: Enhanced Plotly chart generator for native UI visualizations
 
 ---
 

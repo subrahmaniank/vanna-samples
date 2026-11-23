@@ -72,9 +72,22 @@ observed associations, not evidence that the contact caused the cure.
    Qdrant collection prefix is `auto_finance`, separate from other samples.
 4. Run `uv run python -m auto_finance.seed_memory` to load schema and example
    SQL into Qdrant. This requires FastEmbed to download its local model once.
-5. Start the web server with `uv run python -m auto_finance.auto_finance_server`
-   on port 8090, or the MCP server with
-   `uv run python -m auto_finance.auto_finance_mcp` on port 8091.
+
+## Entry Points
+
+### Web & API Server (VannaFastAPIServer)
+
+The main server serves both the interactive `<vanna-chat>` web interface and the SSE streaming backend:
+- `auto_finance/auto_finance_server.py` - Main server (port 8090)
+
+### MCP Server (Model Context Protocol)
+
+Run the SSE-based MCP server:
+- `auto_finance/auto_finance_mcp.py` - MCP server (port 8091)
+
+The `auto_finance/sql_tool.py` file provides enhanced SQL execution tools:
+- `AutoFinanceRunSqlTool`: Extends Vanna's RunSqlTool to handle CTEs (WITH queries) by automatically wrapping them in subqueries for CSV export. Vanna's RunSqlTool writes a CSV only when the statement starts with SELECT; a read-only CTE returning rows needs the same path.
+- `AutoFinanceVisualizeDataTool`: Customizes filename handling to prevent inventing filenames. Uses only the exact CSV filename returned by a successful run_sql call in the current conversation.
 
 ## Chart demo questions
 
