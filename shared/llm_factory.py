@@ -15,6 +15,23 @@ except ImportError:
     AzureOpenAILlmService = None
 
 
+def _normalize_openai_v1_base_url(base_url: str, *, append_v1: bool = True) -> str:
+    cleaned = base_url.rstrip("/")
+    if append_v1 and not cleaned.endswith("/v1") and "/v1" not in cleaned:
+        cleaned = f"{cleaned}/v1"
+    return cleaned
+
+
+def _parse_truthy_env_flag(value: Any, *, default: bool = True) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in ("true", "1", "yes")
+    return bool(value)
+
+
 def create_llm_service(env_vars: Optional[Dict[str, Any]] = None) -> Any:
     """
     Factory creating an LLM service based on environment configuration.
@@ -28,6 +45,8 @@ def create_llm_service(env_vars: Optional[Dict[str, Any]] = None) -> Any:
          Azure OpenAI service endpoint
       4. 'openai':
          Standard OpenAI platform
+      5. 'custom' / 'openai_compatible' / 'custom_endpoint' / 'custom_llm':
+         Generic OpenAI Chat Completions-compatible HTTP endpoint (URL + model + API key)
     """
     if env_vars is None:
         env_vars = {}
@@ -117,10 +136,37 @@ def create_llm_service(env_vars: Optional[Dict[str, Any]] = None) -> Any:
         or "2024-12-01-preview"
     ).strip()
 
+    # Custom OpenAI-compatible endpoint
+    custom_base_url = (
+        env_vars.get("custom_llm_base_url")
+        or os.getenv("CUSTOM_LLM_BASE_URL")
+        or ""
+    ).strip()
+    custom_api_key = (
+        env_vars.get("custom_llm_api_key")
+        or os.getenv("CUSTOM_LLM_API_KEY")
+        or ""
+    ).strip()
+    custom_model = (
+        env_vars.get("custom_llm_model")
+        or os.getenv("CUSTOM_LLM_MODEL")
+        or ""
+    ).strip()
+    if "custom_llm_append_v1" in env_vars:
+        custom_append_v1 = _parse_truthy_env_flag(
+            env_vars.get("custom_llm_append_v1"), default=True
+        )
+    else:
+        custom_append_v1 = _parse_truthy_env_flag(
+            os.getenv("CUSTOM_LLM_APPEND_V1"), default=True
+        )
+
     # Auto-detect provider if not explicitly given
     if not provider:
         if openrouter_key or os.getenv("OPENROUTER_API_KEY"):
             provider = "openrouter"
+        elif custom_base_url and custom_model:
+            provider = "custom"
         elif bedrock_endpoint or bedrock_key or os.getenv("AWS_BEDROCK_MANTLE_ENDPOINT"):
             provider = "bedrock_mantle"
         elif azure_endpoint:
@@ -224,7 +270,32 @@ def create_llm_service(env_vars: Optional[Dict[str, Any]] = None) -> Any:
             api_key=openai_key
         )
 
+    elif provider in ("custom", "openai_compatible", "custom_endpoint", "custom_llm"):
+        if not OpenAILlmService:
+            raise ImportError(
+                "OpenAILlmService is required for a custom endpoint. "
+                "Install with: pip install 'vanna[openai]'"
+            )
+        if not custom_base_url:
+            raise ValueError("CUSTOM_LLM_BASE_URL is required when LLM_PROVIDER is custom")
+        if not custom_model:
+            raise ValueError("CUSTOM_LLM_MODEL is required when LLM_PROVIDER is custom")
+
+        cleaned_base_url = _normalize_openai_v1_base_url(
+            custom_base_url, append_v1=custom_append_v1
+        )
+        logger.info(
+            f"Using custom OpenAI-compatible endpoint at: {cleaned_base_url} "
+            f"with model: {custom_model}"
+        )
+        return OpenAILlmService(
+            model=custom_model,
+            api_key=custom_api_key or "dummy-key",
+            base_url=cleaned_base_url,
+        )
+
     else:
         raise ValueError(
-            f"Unsupported LLM_PROVIDER '{provider}'. Supported options: 'openrouter', 'bedrock_mantle', 'azure_openai', 'openai'"
+            f"Unsupported LLM_PROVIDER '{provider}'. Supported options: "
+            "'openrouter', 'custom', 'bedrock_mantle', 'azure_openai', 'openai'"
         )

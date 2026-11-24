@@ -44,7 +44,7 @@ def create_agent(
 ) -> Any:
     """
     Factory creating a fully configured Vanna 2.0 Agent for Store Analyzer (DVD Rental).
-    Supports Snowflake/DuckDB/Postgres, Qdrant/ChromaDB/FAISS, and Bedrock Mantle/Azure/OpenAI.
+    Supports Snowflake/DuckDB/Postgres, Qdrant/ChromaDB/FAISS, and OpenRouter/custom/Bedrock Mantle/Azure/OpenAI LLMs.
     """
     if env_vars is None:
         env_vars = EnvironmentLoader.load_environment_variables(
@@ -58,7 +58,7 @@ def create_agent(
     # 2. Vector Tool Memory (Qdrant, ChromaDB, or FAISS via create_agent_memory)
     agent_memory = create_agent_memory(env_vars, collection_prefix=collection_prefix)
 
-    # 3. LLM Service (AWS Bedrock Mantle, Azure OpenAI, or standard OpenAI)
+    # 3. LLM Service (shared/llm_factory — see LLM_PROVIDER in module .env)
     llm_service = create_llm_service(env_vars)
 
     # 4. Local FileSystem for Query Results and Visualizations

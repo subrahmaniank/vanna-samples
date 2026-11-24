@@ -1,7 +1,7 @@
 [project]
 name = "vanna-samples"
 version = "2.0.0"
-description = "Vanna 2.0 Samples with DuckDB, Snowflake, Postgres, Qdrant, ChromaDB, FAISS, and AWS Bedrock Mantle / Azure OpenAI"
+description = "Vanna 2.0 Samples with DuckDB, Snowflake, Postgres, Qdrant, ChromaDB, FAISS, and pluggable LLMs (OpenRouter, custom, Bedrock Mantle, Azure OpenAI, OpenAI)"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

@@ -1,6 +1,6 @@
 # Vanna 2.0 Samples
 
-A collection of sample applications demonstrating the use of **Vanna 2.0** for natural language to SQL generation, agentic retrieval, and interactive database exploration powered by **Snowflake**, **Qdrant Cloud/Service**, and **Azure OpenAI**.
+A collection of sample applications demonstrating the use of **Vanna 2.0** for natural language to SQL generation, agentic retrieval, and interactive database exploration. Backends include **DuckDB**, **Snowflake**, and **PostgreSQL**; vector stores include **Qdrant**, **ChromaDB**, and **FAISS**; LLMs are selected via `shared/llm_factory.py` (OpenRouter, custom OpenAI-compatible endpoints, Bedrock Mantle, Azure OpenAI, or OpenAI).
 
 ## Architecture (Vanna 2.0)
 
@@ -61,11 +61,12 @@ The repository contains four modules:
 - `shared/postgres_runner.py`: PostgreSQL SQL runner implementation
 - `shared/qdrant_agent_memory.py`: Qdrant Cloud vector memory implementation
 - `shared/faiss_agent_memory.py`: FAISS high-performance vector memory implementation
-- `shared/chroma_agent_memory.py`: ChromaDB persistent memory implementation
-- `shared/env_loader.py`: Unified `.env` loader supporting root and module levels
+- `shared/vector_store_factory.py`: Vector memory factory (Qdrant, ChromaDB via Vanna `ChromaAgentMemory`, FAISS)
+- `shared/env_loader.py`: Module-level `.env` loader (paths resolved relative to each sample module)
 - `shared/ssl_utils.py`: System certificate trust for outbound HTTPS
 - `shared/memory_seeder.py`: Bridge for legacy `vn.train()` calls into Vanna 2.0 QdrantAgentMemory
-- `shared/llm_factory.py`: LLM service factory supporting OpenRouter, Bedrock Mantle, Azure OpenAI, and OpenAI
+- `shared/llm_factory.py`: LLM service factory supporting OpenRouter, custom OpenAI-compatible endpoints, Bedrock Mantle, Azure OpenAI, and OpenAI
+- `shared/test_llm_factory.py`: Unit tests for LLM factory URL normalization and custom provider selection (`uv run python -m unittest shared.test_llm_factory`)
 - `shared/system_prompt_builder.py`: Enhanced system prompt builder with schema qualification and native UI charting
 - `shared/chart_generator.py`: Enhanced Plotly chart generator for native UI visualizations
 
@@ -73,10 +74,11 @@ The repository contains four modules:
 
 ## Configuration
 
-Copy `sample.env` to `.env` in the project root or inside each module:
+Copy the module's `sample.env` to `.env` inside that module directory (each sample ships its own template):
 
 ```bash
-cp sample.env .env
+cp adventureworks/sample.env adventureworks/.env
+# Or: cp store_analyzer/sample.env store_analyzer/.env
 ```
 
 Configure the following variables in `.env`:
@@ -97,21 +99,40 @@ QDRANT_URL=https://<cluster-id>.<region>.gcp.cloud.qdrant.io:6333
 QDRANT_API_KEY=your_qdrant_api_key
 
 # -------------------------------------------------------------
-# Active LLM Provider Selector: 'bedrock_mantle' | 'azure_openai' | 'openai'
+# Active LLM Provider Selector: 'openrouter' | 'custom' | 'bedrock_mantle' | 'azure_openai' | 'openai'
 # -------------------------------------------------------------
 LLM_PROVIDER=bedrock_mantle
 
-# 1. AWS Bedrock Mantle (Native OpenAI-compatible endpoint)
+# 1. OpenRouter (alternative)
+# LLM_PROVIDER=openrouter
+# OPENROUTER_API_KEY=your_key
+# OPENROUTER_MODEL=anthropic/claude-3.5-sonnet
+# OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+
+# 2. AWS Bedrock Mantle (Native OpenAI-compatible endpoint)
 BEDROCK_MANTLE_ENDPOINT=https://bedrock-mantle.us-east-1.api.aws/v1
 BEDROCK_MANTLE_API_KEY=your_bedrock_api_key
 BEDROCK_MANTLE_MODEL=anthropic.claude-3-5-sonnet-20241022-v2:0
 AWS_REGION=us-east-1
 
-# 2. Azure OpenAI (alternative)
+# 3. Azure OpenAI (alternative)
 AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
 AZURE_OPENAI_API_KEY=your_azure_key
 AZURE_OPENAI_MODEL=gpt-4o-mini
 AZURE_OPENAI_API_VERSION=2024-12-01-preview
+
+# 4. Standard OpenAI (alternative)
+# LLM_PROVIDER=openai
+# OPENAI_API_KEY=your_openai_key
+# OPENAI_MODEL=gpt-4o-mini
+
+# 5. Custom OpenAI Chat Completions-compatible endpoint (alternative)
+# LLM_PROVIDER=custom
+# CUSTOM_LLM_BASE_URL=https://your-host/v1
+# CUSTOM_LLM_API_KEY=your_api_key
+# CUSTOM_LLM_MODEL=your-model-id
+# CUSTOM_LLM_APPEND_V1=true
+# Set CUSTOM_LLM_APPEND_V1=false when the base URL already includes /v1 or uses a non-root API path.
 ```
 
 `VANNA_MAX_TOOL_ITERATIONS` sets the maximum number of tool executions per chat response. The default is 25; increase it in the module's `.env` if a task still reaches the limit, then restart the server.

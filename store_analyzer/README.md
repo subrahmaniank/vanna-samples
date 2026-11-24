@@ -56,4 +56,4 @@ Key tables in the `main` schema:
 
 ## Legacy Components
 
-- `simple_authorization.py`: Legacy Vanna 1.x authorization class implementing cookie-based authentication with login forms. Used for `/auth/login` endpoint migration to Vanna 2.0. Consider migrating to the new `user_resolver.py` pattern for Vanna 2.0.
+- `simple_authorization.py`: Unused Vanna 1.x authorization helper kept for reference. `/auth/login` and `/auth/logout` are implemented inline in `store_analyzer_server.py`; the live agent uses `user_resolver.py` via `StoreAnalyzerUserResolver`.

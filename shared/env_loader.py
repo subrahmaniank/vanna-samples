@@ -88,7 +88,7 @@ class EnvironmentLoader:
             "db_username": os.getenv("POSTGRES_USERNAME", "postgres").strip(),
             "db_password": os.getenv("POSTGRES_PASSWORD", "").strip(),
 
-            # LLM Provider: 'openrouter', 'bedrock_mantle', 'azure_openai', 'openai'
+            # LLM Provider: 'openrouter', 'custom', 'bedrock_mantle', 'azure_openai', 'openai'
             "llm_provider": os.getenv("LLM_PROVIDER", "").strip().lower(),
 
             # OpenRouter (Unified API endpoint)
@@ -97,6 +97,13 @@ class EnvironmentLoader:
             "openrouter_base_url": os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").strip(),
             "openrouter_site_url": os.getenv("OPENROUTER_SITE_URL", os.getenv("OR_SITE_URL", "")).strip(),
             "openrouter_app_name": os.getenv("OPENROUTER_APP_NAME", os.getenv("OR_APP_NAME", "Vanna 2.0 SQL Agent")).strip(),
+
+            # Custom OpenAI-compatible LLM endpoint
+            "custom_llm_base_url": os.getenv("CUSTOM_LLM_BASE_URL", "").strip(),
+            "custom_llm_api_key": os.getenv("CUSTOM_LLM_API_KEY", "").strip() or None,
+            "custom_llm_model": os.getenv("CUSTOM_LLM_MODEL", "").strip(),
+            "custom_llm_append_v1": os.getenv("CUSTOM_LLM_APPEND_V1", "true").lower()
+            in ("true", "1", "yes"),
 
             # AWS Bedrock Mantle Endpoint & Credentials
             "bedrock_mantle_endpoint": os.getenv("BEDROCK_MANTLE_ENDPOINT", os.getenv("AWS_BEDROCK_MANTLE_ENDPOINT", "")).strip(),
